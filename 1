@@ -1,0 +1,13 @@
+import pandas as pd
+
+# 创建一个3行2列的DataFrame
+df = pd.DataFrame({
+    '特征1': [1, 2, 3],
+    '特征2': [4, 5, 6]
+})
+
+print("DataFrame内容：")
+print(df)
+print("\nshape属性的值：", df.shape)  # 输出 (3, 2)
+print("行数 = df.shape[0]：", df.shape[0])  # 输出 3
+print("列数 = df.shape[1]：", df.shape[1])  # 输出 2

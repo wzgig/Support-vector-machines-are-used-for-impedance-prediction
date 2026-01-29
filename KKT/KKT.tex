@@ -1,0 +1,323 @@
+% TeXstudio编译配置：XeLaTeX + 本地中文字体 + 学术排版（可直接编译）
+% 编译方式：XeLaTeX -> 查看PDF（TeXstudio需配置默认编译器为XeLaTeX）
+\documentclass[12pt,a4paper]{ctexart}
+
+% -------------------------- 核心宏包（稳定兼容） --------------------------
+\usepackage{amsmath,amssymb,amsfonts,mathtools}
+\usepackage{amsthm}
+\usepackage{geometry}
+\usepackage{fontspec}
+\usepackage{booktabs,tabularx}
+\usepackage[table]{xcolor}
+\usepackage{colortbl}
+\usepackage{enumitem}
+\usepackage{setspace}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable} % 兼容旧版本的常用功能
+\usepackage{titlesec}
+\usepackage{ifplatform} % 提供 \ifwindows \ifmacos
+\usepackage{hyperref}   % 尽量最后加载
+
+% -------------------------- 页面布局 --------------------------
+\geometry{top=2.5cm,bottom=2.5cm,left=3cm,right=3cm}
+\setstretch{1.2}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.25em}
+
+% -------------------------- 字体配置（存在就用，不存在回退） --------------------------
+\IfFontExistsTF{Times New Roman}{
+	\setmainfont{Times New Roman}[Ligatures=TeX]
+}{
+	\setmainfont{TeX Gyre Termes}[Ligatures=TeX]
+}
+
+\ifwindows
+\IfFontExistsTF{SimSun}{\setCJKmainfont{SimSun}}{\setCJKmainfont{Microsoft YaHei}}
+\IfFontExistsTF{Microsoft YaHei}{\setCJKsansfont{Microsoft YaHei}}{\setCJKsansfont{SimSun}}
+\else
+\ifmacos
+\IfFontExistsTF{PingFang SC}{\setCJKmainfont{PingFang SC}}{\setCJKmainfont{Songti SC}}
+\IfFontExistsTF{PingFang SC}{\setCJKsansfont{PingFang SC}}{\setCJKsansfont{Heiti SC}}
+\else
+\IfFontExistsTF{Noto Sans CJK SC}{\setCJKmainfont{Noto Sans CJK SC}}{\setCJKmainfont{AR PL UMing CN}}
+\IfFontExistsTF{Noto Sans CJK SC}{\setCJKsansfont{Noto Sans CJK SC}}{\setCJKsansfont{AR PL UMing CN}}
+\fi
+
+% -------------------------- 数学与符号 --------------------------
+\DeclareMathOperator{\grad}{grad}
+\renewcommand{\vec}[1]{\boldsymbol{#1}} % 向量统一加粗
+
+% -------------------------- 配色（沉稳学术蓝） --------------------------
+\definecolor{primary}{RGB}{26, 99, 169}
+\definecolor{primary2}{RGB}{18, 70, 125}
+\definecolor{softbg}{RGB}{245, 248, 252}
+
+% -------------------------- 页眉页脚（彩色横线） --------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small \textit{KKT条件详解}}
+\fancyhead[R]{\small \thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+\makeatletter
+\renewcommand{\headrule}{%
+	\hbox to\headwidth{\color{primary}\leaders\hrule height \headrulewidth\hfill}%
+}
+\makeatother
+
+% -------------------------- 标题样式 --------------------------
+\titleformat{\section}
+{\Large \bfseries \sffamily \color{primary}}
+{\thesection}{1em}{}
+\titleformat{\subsection}
+{\large \bfseries \sffamily \color{primary!85}}
+{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+{\normalsize \bfseries \sffamily \color{primary!70}}
+{\thesubsubsection}{1em}{}
+
+\titlespacing*{\section}{0pt}{1.1em}{0.6em}
+\titlespacing*{\subsection}{0pt}{0.9em}{0.45em}
+\titlespacing*{\subsubsection}{0pt}{0.7em}{0.35em}
+
+% -------------------------- 列表样式 --------------------------
+\setlist[itemize]{
+	leftmargin=*,
+	labelsep=0.8em,
+	itemsep=0.25em,
+	topsep=0.3em,
+	label=\textcolor{primary}{$\bullet$}
+}
+\setlist[enumerate]{
+	leftmargin=*,
+	labelsep=0.8em,
+	itemsep=0.25em,
+	topsep=0.3em,
+	label=\arabic*).
+}
+
+% -------------------------- 定理环境（更学术的外观） --------------------------
+\theoremstyle{definition}
+\newtheorem{definition}{定义}[section]
+\theoremstyle{plain}
+\newtheorem{theorem}{定理}[section]
+
+% -------------------------- tcolorbox 全局风格（更统一） --------------------------
+\tcbset{
+	boxrule=0.8pt,
+	colback=softbg,
+	colframe=primary,
+	arc=2.2mm,
+	left=1.2mm,right=1.2mm,top=1.0mm,bottom=1.0mm,
+	fonttitle=\bfseries\sffamily,
+	coltitle=primary2,
+	title filled=false,
+	breakable
+}
+
+
+% -------------------------- 超链接配置 --------------------------
+\hypersetup{
+	colorlinks=true,
+	linkcolor=primary,
+	citecolor=primary,
+	urlcolor=primary,
+	bookmarksnumbered=true,
+	unicode=true,
+	pdftitle={KKT条件详解},
+	pdfauthor={优化理论基础}
+}
+
+% -------------------------- 文档信息 --------------------------
+\title{\Huge \sffamily \bfseries KKT条件详解\\[-0.25em]
+	\large \normalfont \color{primary!85} Karush--Kuhn--Tucker 条件（约束优化核心）}
+\author{\large 优化理论基础}
+\date{}
+
+\begin{document}
+	\maketitle
+	\thispagestyle{fancy}
+	
+	% -------------------------- 摘要 --------------------------
+	\begin{tcolorbox}[title={核心摘要}]
+		\noindent \textbf{KKT条件（Karush--Kuhn--Tucker）}是含\textbf{不等式约束}的约束优化问题的一阶最优性条件，可视为拉格朗日乘子法在不等式约束场景下的系统扩展。
+		在\textbf{凸优化}与满足\textbf{Slater条件}等正则性假设时，KKT条件不仅是必要条件，且构成\textbf{全局最优的充要条件}。
+		这使其成为非线性规划与机器学习推导（如 SVM、Lasso、对偶问题构造）的基础工具。
+	\end{tcolorbox}
+	
+	\vspace{0.6em}
+	
+	% -------------------------- 1. 标准形式 --------------------------
+	\section{问题背景与标准形式}
+	在优化理论中，我们常研究如下带约束的非线性规划（以最小化为例）：
+	\begin{align}
+		\min_{\vec{x}\in\mathbb{R}^n}\quad & f(\vec{x}) \notag\\
+		\text{s.t.}\quad
+		& g_i(\vec{x})\le 0,\quad i=1,2,\dots,m \quad (\text{不等式约束})\\
+		& h_j(\vec{x})=0,\quad j=1,2,\dots,p \quad (\text{等式约束}) \notag
+	\end{align}
+	
+	其中：
+	\begin{itemize}
+		\item $f(\vec{x})$：目标函数（通常假设连续可微；凸优化时要求凸性）；
+		\item $g_i(\vec{x})\le 0$：不等式约束（凸优化中要求 $g_i$ 为凸函数）；
+		\item $h_j(\vec{x})=0$：等式约束（凸优化中通常要求 $h_j$ 为仿射函数）；
+		\item $\vec{x}\in\mathbb{R}^n$：$n$维优化变量向量（本文统一以加粗向量表示）。
+	\end{itemize}
+	
+	% -------------------------- 2. 拉格朗日函数 --------------------------
+	\section{拉格朗日函数构造}
+	为将约束信息统一纳入目标函数，引入\textbf{拉格朗日函数}：
+	\begin{equation}
+		L(\vec{x},\vec{\lambda},\vec{\mu})
+		= f(\vec{x}) + \sum_{i=1}^m \lambda_i g_i(\vec{x}) + \sum_{j=1}^p \mu_j h_j(\vec{x})
+	\end{equation}
+	
+	其中对偶变量满足：
+	\begin{itemize}
+		\item $\lambda_i\ge 0$：对应不等式约束的拉格朗日乘子（非负性是 KKT 区别于纯等式情形的关键）；
+		\item $\mu_j\in\mathbb{R}$：对应等式约束的乘子（无符号限制）。
+	\end{itemize}
+	
+	% -------------------------- 3. KKT 条件 --------------------------
+	\section{KKT条件的核心组成}
+	\begin{definition}[KKT条件]
+		若 $\vec{x}^*$ 是该问题的局部最优解，并且满足一定的\textbf{约束规范}（如 LICQ / MFCQ），则存在
+		$\vec{\lambda}^*\in\mathbb{R}^m_+$ 与 $\vec{\mu}^*\in\mathbb{R}^p$ 使得以下四组条件同时成立。
+	\end{definition}
+	
+	\begin{table}[!htbp]
+		\centering
+		\rowcolors{2}{primary!5}{white}
+		\begin{tabularx}{\linewidth}{@{}l l X@{}}
+			\toprule[1pt]
+			\textbf{条件分类} & \textbf{数学表达式} & \textbf{核心含义} \\
+			\midrule
+			原始可行性 &
+			$g_i(\vec{x}^*)\le 0,\ h_j(\vec{x}^*)=0$ &
+			最优解必须位于可行域内，满足所有原始约束 \\
+			\midrule
+			对偶可行性 &
+			$\lambda_i^*\ge 0$ &
+			不等式约束的乘子非负，体现“惩罚方向”的一致性 \\
+			\midrule
+			驻点（稳定性） &
+			$\nabla_{\vec{x}} L(\vec{x}^*,\vec{\lambda}^*,\vec{\mu}^*)=\vec{0}$ &
+			等价于
+			$\nabla f(\vec{x}^*)+\sum_i\lambda_i^*\nabla g_i(\vec{x}^*)+\sum_j\mu_j^*\nabla h_j(\vec{x}^*)=\vec{0}$；
+			即目标函数梯度可由约束梯度线性组合表示 \\
+			\midrule
+			互补松弛 &
+			$\lambda_i^*\,g_i(\vec{x}^*)=0,\ \forall i$ &
+			每个不等式约束要么\textbf{激活}（$g_i(\vec{x}^*)=0$），要么\textbf{不影响最优性}（$\lambda_i^*=0$） \\
+			\bottomrule[1pt]
+		\end{tabularx}
+		\vspace{0.35em}
+		\caption{KKT条件四大核心组成（约束优化最优性判据）}
+		\label{tab:kkt_conditions}
+	\end{table}
+	
+	% -------------------------- 4. 几何与直观 --------------------------
+	\section{几何意义与直观解释}
+	\subsection{驻点条件的几何含义}
+	在最优解 $\vec{x}^*$ 处，若某些不等式约束处于激活状态（即 $g_i(\vec{x}^*)=0$），则目标函数的负梯度
+	$-\nabla f(\vec{x}^*)$ 必须落在\textbf{由激活约束梯度张成的锥}内：
+	\begin{itemize}
+		\item 不等式约束：由 $\nabla g_i(\vec{x}^*)$ 的\textbf{非负}线性组合形成锥体；
+		\item 等式约束：由于 $\mu_j$ 可正可负，$\nabla h_j(\vec{x}^*)$ 贡献为\textbf{双向}（线性子空间成分）。
+	\end{itemize}
+	
+	\subsection{互补松弛的工程解释}
+	互补松弛是 KKT 条件最“可解释”的部分，常用来理解\textbf{约束是否真的在起作用}：
+	\begin{enumerate}
+		\item 若 $\lambda_i^*>0$，则必须有 $g_i(\vec{x}^*)=0$，此时该约束是\textbf{紧的/有效的}，$\lambda_i^*$ 可解释为\textbf{影子价格}（约束放松对目标最优值的边际影响）。
+		\item 若 $g_i(\vec{x}^*)<0$，则必有 $\lambda_i^*=0$，此时该约束在最优点处\textbf{不影响}最优性。
+	\end{enumerate}
+	
+	% -------------------------- 5. 约束规范 --------------------------
+	\section{约束规范（正则性条件）}
+	KKT 作为必要条件通常需要一定的正则性（避免约束梯度退化）。常见约束规范包括：
+	\begin{itemize}
+		\item \textbf{LICQ（线性独立约束规范）}：激活约束的梯度向量线性独立（最常用，验证直观）；
+		\item \textbf{MFCQ（Mangasarian--Fromovitz）}：比 LICQ 更弱，允许梯度相关但仍存在可行下降方向；
+		\item \textbf{Slater 条件}：凸优化常用的强条件，要求存在严格可行点（$g_i(\vec{x})<0$ 且满足等式约束）。
+	\end{itemize}
+	
+	% -------------------------- 6. 必要与充分 --------------------------
+	\section{必要性与充分性}
+	\begin{theorem}[KKT条件的必要性与充分性（典型表述）]
+		\begin{enumerate}
+			\item （必要性）若 $\vec{x}^*$ 为局部最优解且满足约束规范（如 LICQ/MFCQ），则 $\vec{x}^*$ 满足 KKT 条件；
+			\item （充分性）若 $f$ 为凸函数、$g_i$ 为凸函数、$h_j$ 为仿射函数，并满足适当正则性（常用 Slater），则任一满足 KKT 的点都是\textbf{全局最优解}。
+		\end{enumerate}
+	\end{theorem}
+	
+	% -------------------------- 7. 示例 --------------------------
+	\section{实战应用示例}
+	\begin{tcolorbox}[title={示例：带不等式约束的二次优化（KKT快速检验）}]
+		求解并用 KKT 条件验证最优解：
+		\[
+		\min_{\vec{x}=(x_1,x_2)^T}\ f(\vec{x}) = x_1^2 + x_2^2
+		\quad \text{s.t.}\quad
+		g(\vec{x}) = x_1 + x_2 - 1 \le 0.
+		\]
+	\end{tcolorbox}
+	
+	\subsection{步骤1：构造拉格朗日函数}
+	\[
+	L(\vec{x},\lambda)=x_1^2+x_2^2+\lambda(x_1+x_2-1),\quad \lambda\ge 0.
+	\]
+	
+	\subsection{步骤2：列写KKT条件}
+	\begin{enumerate}
+		\item 原始可行性：$x_1+x_2-1\le 0$；
+		\item 对偶可行性：$\lambda\ge 0$；
+		\item 驻点条件：
+		\[
+		\nabla_{\vec{x}}L=
+		\begin{pmatrix}
+			2x_1+\lambda\\
+			2x_2+\lambda
+		\end{pmatrix}
+		=\vec{0};
+		\]
+		\item 互补松弛：$\lambda(x_1+x_2-1)=0$。
+	\end{enumerate}
+	
+	\subsection{步骤3：求解与验证}
+	由驻点条件得 $x_1=x_2=-\lambda/2$。分情况讨论：
+	\begin{itemize}
+		\item 若 $\lambda>0$（约束激活），则必须有 $x_1+x_2-1=0$，
+		代入 $x_1=x_2=-\lambda/2$ 得 $-\lambda-1=0\Rightarrow \lambda=-1$，与 $\lambda\ge 0$ 矛盾；
+		\item 因此只能取 $\lambda=0$（约束不激活），此时 $x_1=x_2=0$，且 $0+0-1=-1\le 0$ 可行。
+	\end{itemize}
+	最终最优解为：
+	\[
+	\vec{x}^*=(0,0)^T,\qquad \lambda^*=0.
+	\]
+	
+	% -------------------------- 8. 与拉格朗日乘子法关系 --------------------------
+	\section{与拉格朗日乘子法的关系}
+	KKT 条件可看作拉格朗日乘子法的\textbf{系统推广}：
+	\begin{itemize}
+		\item 经典拉格朗日乘子法主要处理\textbf{等式约束}，不涉及对偶可行性与互补松弛；
+		\item KKT 通过引入 $\lambda_i\ge 0$ 与互补松弛，完整刻画\textbf{不等式约束}在最优点的“是否激活”。
+	\end{itemize}
+	
+	% -------------------------- 9. 机器学习中的应用 --------------------------
+	\section{机器学习中的典型应用}
+	KKT 是机器学习中构造对偶、解释稀疏性与支持样本的重要工具：
+	\begin{enumerate}
+		\item \textbf{支持向量机（SVM）}：互补松弛刻画“支持向量”——只有激活约束的样本影响最优超平面；
+		\item \textbf{Lasso回归}：KKT 条件给出稀疏解的判别规则，可解释为何许多系数被压到 0；
+		\item \textbf{强化学习/约束策略优化}：将约束（如熵约束、动作边界、风险约束）纳入拉格朗日框架并进行对偶优化。
+	\end{enumerate}
+	
+	% -------------------------- 总结 --------------------------
+	\begin{tcolorbox}[title={核心总结}]
+		\noindent 1.\ KKT 条件是约束优化的一阶必要条件，在凸优化与合适正则性下是全局最优的充要条件；\\
+		\noindent 2.\ 四大核心：原始可行性、对偶可行性、驻点（稳定性）、互补松弛（最具工程解释力）；\\
+		\noindent 3.\ 在对偶理论与机器学习算法推导中，KKT 是“从原始到对偶、从几何到可解释性”的关键桥梁。
+	\end{tcolorbox}
+	
+\end{document}
