@@ -8,8 +8,8 @@ import concurrent.futures
 import time
 
 # --- 配置 ---
-INPUT_DIR = os.path.join("your_root", "csv_data")
-OUTPUT_FILE = "equivalent_circuit_parameters_optimized.csv"
+INPUT_DIR = os.path.join("your_root_", "csv_data")
+OUTPUT_FILE = "equivalent_circuit_parameters_optimized_accurate_large_area.csv"
 # 目标元素
 ELEMENTS = ["Y11", "Y12", "Y21", "Y22"]
 
@@ -54,94 +54,120 @@ def process_single_file(fpath):
 
     try:
         df = pd.read_csv(fpath)
+        if df.empty:
+            return [], f"{basename}: Empty file"
         
         # 频率向量 (复数s)
         if 'Frequency_Hz' not in df.columns:
             return [], f"{basename}: Missing 'Frequency_Hz' column"
             
         freq_hz = df['Frequency_Hz'].values
+        if np.isnan(freq_hz).any():
+             return [], f"{basename}: Frequency_Hz contains NaN"
+
         s_vec = 1j * 2 * np.pi * freq_hz
         
+        errors = []
+
         for elem in ELEMENTS:
-            real_col = f"{elem}_Real"
-            imag_col = f"{elem}_Imag"
-            
-            if real_col not in df.columns or imag_col not in df.columns:
-                continue
-            
-            # 2. 构建复数响应
-            f_vec = df[real_col].values + 1j * df[imag_col].values
-            
-            # [优化重构]
-            # 现在我们只需通知 VF.py 使用 "反向幅值加权" 策略即可
-            # 无需在业务代码中手动计算 weights 数组，保持了业务逻辑的整洁和算法的封装性
-            
-            # 4. 执行矢量拟合
-            poles, residues, d, h, metrics = VF.vectfit_find_best_order(
-                f_vec, s_vec, 
-                min_poles=2, max_poles=40, step=2, 
-                target_error=1e-5, 
-                weighting_policy='none', # <--- 优雅的接口调用
-                silent=True
-            )
-            
-            # [优化] 5. 检查无源性 (Passivity Check)
-            is_passive, min_real, viol_freq = VF.check_passivity(s_vec, poles, residues, d, h)
+            try:
+                real_col = f"{elem}_Real"
+                imag_col = f"{elem}_Imag"
+                
+                if real_col not in df.columns or imag_col not in df.columns:
+                    continue
+                
+                # 2. 构建复数响应
+                real_vals = df[real_col].values
+                imag_vals = df[imag_col].values
+                
+                if np.isnan(real_vals).any() or np.isnan(imag_vals).any() or np.isinf(real_vals).any() or np.isinf(imag_vals).any():
+                    errors.append(f"{elem}: Data contains NaN/Inf")
+                    continue
 
-            # 6. 系统参数提取
-            analyzer = VF.SystemAnalyzer()
-            analyzer.load_fitting_result(poles, residues, d, h)
-            
-            # 基础元数据 (对每一行都重复，方便后续 Pandas 分析)
-            base_info = {
-                'Filename': basename,
-                **conditions,
-                'Element': elem,
-                'RMS_Rel_Error': metrics['rms_rel'],
-                'Max_Rel_Error': metrics['max_rel'],
-                'Order': len(poles),
-                'Is_Passive': is_passive,       # 新增指标
-                'Min_Real_Part': min_real       # 新增指标
-            }
+                f_vec = real_vals + 1j * imag_vals
+                
+                # [新增] 检查信号幅值，如果接近 0 则跳过拟合
+                max_mag = np.max(np.abs(f_vec))
+                if max_mag < 1e-12:
+                     # 信号过小，视为空载或短路，不进行拟合
+                     # 可根据需要记录一条 "Zero Response" 记录，或者直接跳过
+                    # file_results.append({ ... }) 
+                    continue
 
-            # 收集电路参数
-            # 并联 RC
-            if analyzer.output_data['rc_params']:
-                row = base_info.copy()
-                row.update({
-                    'Branch_Type': 'RC_Parallel',
-                    'Branch_ID': 'Parallel',
-                    'R': analyzer.output_data['rc_params']['R'],
-                    'C': analyzer.output_data['rc_params']['C']
-                })
-                file_results.append(row)
-            
-            # 串联 RL
-            if analyzer.output_data['rl_params']:
-                for item in analyzer.output_data['rl_params']:
+                # [优化重构]
+                # 现在我们只需通知 VF.py 使用 "反向幅值加权" 策略即可
+                # 无需在业务代码中手动计算 weights 数组，保持了业务逻辑的整洁和算法的封装性
+                
+                # 4. 执行矢量拟合
+                poles, residues, d, h, metrics = VF.vectfit_find_best_order(
+                    f_vec, s_vec, 
+                    min_poles=3, max_poles=3, step=1,  # 固定阶数为3以提高稳定性
+                    # max_iter=100, tol=1e-6,
+                    target_error=1e-5, 
+                    weighting_policy='none', # <--- 优雅的接口调用
+                    silent=True
+                )
+                
+                # [优化] 5. 检查无源性 (Passivity Check)
+                is_passive, min_real, viol_freq = VF.check_passivity(s_vec, poles, residues, d, h)
+
+                # 6. 系统参数提取
+                analyzer = VF.SystemAnalyzer()
+                analyzer.load_fitting_result(poles, residues, d, h)
+                
+                # 基础元数据 (对每一行都重复，方便后续 Pandas 分析)
+                base_info = {
+                    'Filename': basename,
+                    **conditions,
+                    'Element': elem,
+                    'RMS_Rel_Error': metrics['rms_rel'],
+                    'Max_Rel_Error': metrics['max_rel'],
+                    'Order': len(poles),
+                    'Is_Passive': is_passive,       # 新增指标
+                    'Min_Real_Part': min_real       # 新增指标
+                }
+
+                # 收集电路参数
+                # 并联 RC
+                if analyzer.output_data['rc_params']:
                     row = base_info.copy()
                     row.update({
-                        'Branch_Type': 'RL_Series',
-                        'Branch_ID': item['id'],
-                        'R': item['R'],
-                        'L': item['L']
+                        'Branch_Type': 'RC_Parallel',
+                        'Branch_ID': 'Parallel',
+                        'R': analyzer.output_data['rc_params']['R'],
+                        'C': analyzer.output_data['rc_params']['C']
                     })
                     file_results.append(row)
+                
+                # 串联 RL
+                if analyzer.output_data['rl_params']:
+                    for item in analyzer.output_data['rl_params']:
+                        row = base_info.copy()
+                        row.update({
+                            'Branch_Type': 'RL_Series',
+                            'Branch_ID': item['id'],
+                            'R': item['R'],
+                            'L': item['L']
+                        })
+                        file_results.append(row)
 
-            # 串联 RLC
-            if analyzer.output_data['rlc_params']:
-                for item in analyzer.output_data['rlc_params']:
-                    row = base_info.copy()
-                    row.update({
-                        'Branch_Type': 'RLC_Series',
-                        'Branch_ID': item['id'],
-                        'R': item['R'],
-                        'L': item['L'],
-                        'C': item['C']
-                    })
-                    file_results.append(row)
-                    
-        return file_results, None
+                # 串联 RLC
+                if analyzer.output_data['rlc_params']:
+                    for item in analyzer.output_data['rlc_params']:
+                        row = base_info.copy()
+                        row.update({
+                            'Branch_Type': 'RLC_Series',
+                            'Branch_ID': item['id'],
+                            'R': item['R'],
+                            'L': item['L'],
+                            'C': item['C']
+                        })
+                        file_results.append(row)
+            except Exception as elem_e:
+                errors.append(f"{elem}: {str(elem_e)}")
+
+        return file_results, "; ".join(errors) if errors else None
 
     except Exception as e:
         return [], f"{basename}: {str(e)}"

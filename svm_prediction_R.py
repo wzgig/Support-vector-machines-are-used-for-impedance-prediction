@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.metrics import r2_score
 
 # --- 全局配置 ---
-INPUT_CSV = os.path.join("csv_data", "equivalent_circuit_parameters_optimized_Y11.csv")
+INPUT_CSV = "equivalent_circuit_parameters_optimized_accurate_Y11.csv"
 MODEL_SAVE_PATH = "svm_model_R_Y11_tuned.pkl"
 TARGET_COL = "R"  # 目标物理量
 FEATURES = ['P', 'Q', 'V', 'xi']
@@ -187,13 +187,14 @@ def load_data_and_create_template(csv_path):
     return X, Y, sorted_template
 
 def main():
-    # 检查CSV路径，如果在 csv_data 子文件夹下，则使用那个路径，否则使用当前目录
+    # 检查CSV路径
     if os.path.exists(INPUT_CSV):
         csv_path = INPUT_CSV
-    elif os.path.exists("equivalent_circuit_parameters_optimized_Y11.csv"):
-        csv_path = "equivalent_circuit_parameters_optimized_Y11.csv"
+    # 兼容性检查：如果当前位置找不到，尝试去 csv_data 找
+    elif os.path.exists(os.path.join("csv_data", INPUT_CSV)):
+        csv_path = os.path.join("csv_data", INPUT_CSV)
     else:
-        print(f"错误：找不到文件 {INPUT_CSV} 或当前目录下的同名文件")
+        print(f"错误：找不到文件 {INPUT_CSV}")
         return
 
     # 1. 准备数据

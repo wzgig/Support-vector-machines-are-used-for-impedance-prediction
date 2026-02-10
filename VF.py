@@ -506,7 +506,12 @@ def vectfit_find_best_order(f, s, min_poles=2, max_poles=40, step=2, target_erro
                 break
                 
         except Exception as e:
+            last_error = e
             if not silent: print(f"{n:<6} | {'Failed':<15} | {str(e)}")
+
+    if best_result is None:
+        error_msg = str(last_error) if 'last_error' in locals() else "No attempts made"
+        raise RuntimeError(f"All fitting attempts failed in range [{min_poles}, {max_poles}]. Last error: {error_msg}")
 
     if not silent: print(f"[Auto-Fit] 最优结果: 阶数 = {best_order}, RMS相对误差 = {best_error_score:.6e}")
     return best_result[0], best_result[1], best_result[2], best_result[3], best_metrics
@@ -632,7 +637,7 @@ class SystemAnalyzer:
         d = self.output_data['offset']
         h = self.output_data['slope']
         
-        if abs(d) > 1e-20:
+        if abs(d) > 1e-100:
             # 假设模型为 Y(s) = ... + d + s*h
             # d 对应电导 G = 1/R, h 对应电容 C
             R_val = 1.0 / d

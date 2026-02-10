@@ -89,7 +89,7 @@
 
 clear,clc,tic
 %% ================= 配置部分 =================
-INPUT_DIR  = "your_root";  
+INPUT_DIR  = "your_root_";  
 OUTPUT_DIR = fullfile(INPUT_DIR, "csv_data");
 
 F_START    = 1e-1;
