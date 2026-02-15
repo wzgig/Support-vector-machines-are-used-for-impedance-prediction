@@ -8,8 +8,8 @@ import concurrent.futures
 import time
 
 # --- 配置 ---
-INPUT_DIR = os.path.join("your_root_", "csv_data")
-OUTPUT_FILE = "equivalent_circuit_parameters_optimized_accurate_large_area.csv"
+INPUT_DIR = os.path.join("your_root_small", "csv_data")
+OUTPUT_FILE = "equivalent_circuit_parameters_optimized_accurate_Range_5.csv"
 # 目标元素
 ELEMENTS = ["Y11", "Y12", "Y21", "Y22"]
 
@@ -70,11 +70,22 @@ def process_single_file(fpath):
         errors = []
 
         for elem in ELEMENTS:
+            # 预定义 base_info 的一部分，用于错误记录
+            error_base_info = {
+                    'Filename': basename,
+                    **conditions,
+                    'Element': elem,
+            }
+            
             try:
                 real_col = f"{elem}_Real"
                 imag_col = f"{elem}_Imag"
                 
                 if real_col not in df.columns or imag_col not in df.columns:
+                    # [新增] 记录缺失列的错误行
+                    err_row = error_base_info.copy()
+                    err_row.update({'Branch_Type': 'Missing_Columns', 'Branch_ID': 'Error'})
+                    file_results.append(err_row)
                     continue
                 
                 # 2. 构建复数响应
@@ -83,17 +94,23 @@ def process_single_file(fpath):
                 
                 if np.isnan(real_vals).any() or np.isnan(imag_vals).any() or np.isinf(real_vals).any() or np.isinf(imag_vals).any():
                     errors.append(f"{elem}: Data contains NaN/Inf")
+                    # [新增] 记录数据无效的错误行
+                    err_row = error_base_info.copy()
+                    err_row.update({'Branch_Type': 'Data_Invalid_NaN_Inf', 'Branch_ID': 'Error'})
+                    file_results.append(err_row)
                     continue
 
                 f_vec = real_vals + 1j * imag_vals
                 
+                # [修改] 已取消小信号跳过，无论信号大小均参与计算
+                # (原逻辑：max_mag < 1e-12 则 continue)
                 # [新增] 检查信号幅值，如果接近 0 则跳过拟合
-                max_mag = np.max(np.abs(f_vec))
-                if max_mag < 1e-12:
-                     # 信号过小，视为空载或短路，不进行拟合
-                     # 可根据需要记录一条 "Zero Response" 记录，或者直接跳过
-                    # file_results.append({ ... }) 
-                    continue
+                # max_mag = np.max(np.abs(f_vec))
+                # if max_mag < 1e-12:
+                #      # 信号过小，视为空载或短路，不进行拟合
+                #      # 可根据需要记录一条 "Zero Response" 记录，或者直接跳过
+                #     # file_results.append({ ... }) 
+                #     continue
 
                 # [优化重构]
                 # 现在我们只需通知 VF.py 使用 "反向幅值加权" 策略即可
@@ -102,10 +119,10 @@ def process_single_file(fpath):
                 # 4. 执行矢量拟合
                 poles, residues, d, h, metrics = VF.vectfit_find_best_order(
                     f_vec, s_vec, 
-                    min_poles=3, max_poles=3, step=1,  # 固定阶数为3以提高稳定性
+                    min_poles=3, max_poles=3, step=1,
                     # max_iter=100, tol=1e-6,
                     target_error=1e-5, 
-                    weighting_policy='none', # <--- 优雅的接口调用
+                    weighting_policy='inv_mag', # <--- 优雅的接口调用
                     silent=True
                 )
                 
@@ -129,8 +146,11 @@ def process_single_file(fpath):
                 }
 
                 # 收集电路参数
+                extracted_any = False
+
                 # 并联 RC
                 if analyzer.output_data['rc_params']:
+                    extracted_any = True
                     row = base_info.copy()
                     row.update({
                         'Branch_Type': 'RC_Parallel',
@@ -142,6 +162,7 @@ def process_single_file(fpath):
                 
                 # 串联 RL
                 if analyzer.output_data['rl_params']:
+                    extracted_any = True
                     for item in analyzer.output_data['rl_params']:
                         row = base_info.copy()
                         row.update({
@@ -154,6 +175,7 @@ def process_single_file(fpath):
 
                 # 串联 RLC
                 if analyzer.output_data['rlc_params']:
+                    extracted_any = True
                     for item in analyzer.output_data['rlc_params']:
                         row = base_info.copy()
                         row.update({
@@ -164,13 +186,39 @@ def process_single_file(fpath):
                             'C': item['C']
                         })
                         file_results.append(row)
+
+                # [修复] 如果未提取到任何标准电路拓扑，记录一条原始拟合结果，防止文件丢失
+                if not extracted_any:
+                    row = base_info.copy()
+                    row.update({
+                        'Branch_Type': 'No_Topology_Match', 
+                        'Branch_ID': 'None',
+                    })
+                    file_results.append(row)
             except Exception as elem_e:
                 errors.append(f"{elem}: {str(elem_e)}")
+                # [新增] 发生异常时记录错误行
+                err_row = error_base_info.copy()
+                err_row.update({
+                    'Branch_Type': 'Processing_Exception', 
+                    'Branch_ID': 'Error',
+                    # 可以在某一列记录具体错误，如果需要
+                })
+                file_results.append(err_row)
 
         return file_results, "; ".join(errors) if errors else None
 
     except Exception as e:
-        return [], f"{basename}: {str(e)}"
+        # [修改] 全局解析失败也返回一行记录，防止文件完全丢失
+        err_row = {
+            'Filename': basename,
+            **conditions,
+            'Element': 'All',
+            'Branch_Type': 'File_Read_Error',
+            'Branch_ID': 'Error',
+            'R': str(e) # 将错误信息借放在 R 列或其他备注列
+        }
+        return [err_row], f"{basename}: {str(e)}"
 
 def run_batch():
     # 查找所有 CSV
