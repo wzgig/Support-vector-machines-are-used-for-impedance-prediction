@@ -46,8 +46,9 @@ OUTPUT_CSV_NAME = "predicted_impedance_results.csv"
 # 注意: xi 单位为弧度 (Radians)
 # 您可以在此处添加任意多组工况
 NEW_CONDITIONS = [
-    # 示例工况 (您可以根据需要修改)
-    {'Case_Name': 'New_Case_1', 'P': -0.977, 'Q': -0.233, 'V': 1.05, 'xi': 0.1}, 
+    {'Case_Name': 'Case_1', 'P': -1, 'Q': 0, 'V': 1, 'xi': 0.1}, 
+    {'Case_Name': 'Case_2', 'P': -0.8, 'Q': 1, 'V': 1, 'xi': 0.1}, 
+    {'Case_Name': 'Case_3', 'P': -0.8, 'Q': -1, 'V': 1, 'xi': -0.1}, 
 ]
 # ==========================================
 

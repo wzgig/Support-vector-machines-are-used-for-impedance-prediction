@@ -57,7 +57,7 @@ class ExperimentConfig:
     """实验参数配置类"""
     input_filename: str = "equivalent_circuit_parameters_optimized_accurate_Y11.csv" 
     backup_filenames:Tuple[str, ...] = ("extracted_RL_Series_Y11_wide.csv",)
-    model_save_path: str = "svm_model_ArcSinh_Impedance_d.pkl"
+    model_save_path: str = "svm_model_ArcSinh_Impedance_R_f.pkl"
     result_save_path: str = "results_arcsinh_d.txt"
     
     target_branch_type: str = "RL_Series"

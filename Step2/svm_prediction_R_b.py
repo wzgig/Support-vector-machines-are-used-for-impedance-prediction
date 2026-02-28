@@ -59,7 +59,7 @@ class ExperimentConfig:
     """实验参数配置类"""
     input_filename: str = "extracted_RL_Series_Y11_wide.csv" # 切换至宽表以获取正确的 R_b 数据
     backup_filenames:Tuple[str, ...] = ("equivalent_circuit_parameters_optimized_accurate_Y11.csv",)
-    model_save_path: str = "svm_model_ArcSinh_Impedance_b.pkl"
+    model_save_path: str = "svm_model_ArcSinh_Impedance_R_f.pkl"
     
     target_branch_type: str = "RL_Series"
     target_branch_id: str = "b" # 目标分支为 b

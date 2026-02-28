@@ -53,8 +53,7 @@ logger = logging.getLogger(__name__)
 class ExperimentConfig:
     """实验参数配置类"""
     input_filename: str = "equivalent_circuit_parameters_optimized_accurate_Y11.csv"
-    backup_filenames:Tuple[str, ...] = ("equivalent_circuit_parameters_optimized_Y11.csv",)
-    model_save_path: str = "svm_model_ArcSinh_Impedance_a.pkl"
+    model_save_path: str = "svm_model_ArcSinh_Impedance_R_f.pkl"
     
     target_branch_type: str = "RL_Series"
     target_branch_id: str = "a"

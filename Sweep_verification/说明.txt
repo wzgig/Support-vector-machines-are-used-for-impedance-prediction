@@ -1,0 +1,2 @@
+GM、PM是计算频率响应函数，FFTread_Vp、FFTread_Vn分别是正负序扰动注入，dq_saopin_for_GFL_inverter是主程序。
+可以在GFL_inverter中改变需要扫频的元件。

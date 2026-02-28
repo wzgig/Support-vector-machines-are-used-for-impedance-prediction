@@ -138,8 +138,8 @@ class DataProcessor:
         # --- 自动清洗逻辑 (L_e 专用) ---
         # 现象: L_e 包含正负极大数值。
         # 策略: 设定宽泛的物理范围 [-80000, 80000] (覆盖 -62k 到 65k)。
-        min_limit = -80000.0
-        max_limit = 80000.0
+        min_limit = -7000.0
+        max_limit = 7000.0
         
         mask_range = (df['target'] >= min_limit) & (df['target'] <= max_limit)
         n_removed_range = (~mask_range).sum()

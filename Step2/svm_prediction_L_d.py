@@ -55,8 +55,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ExperimentConfig:
     """实验参数配置类"""
-    input_filename: str = "extracted_RL_Series_Y11_wide.csv" 
-    backup_filenames:Tuple[str, ...] = ("equivalent_circuit_parameters_optimized_accurate_Y11.csv",)
+    input_filename: str = "equivalent_circuit_parameters_optimized_accurate_Y11.csv" 
+    backup_filenames:Tuple[str, ...] = ("extracted_RL_Series_Y11_wide.csv",)
     model_save_path: str = "svm_model_ArcSinh_Impedance_L_d.pkl"
     result_save_path: str = "results_L_d.txt"
     
