@@ -374,4 +374,36 @@ disp("====================================================")
     disp("Delete done. Deleted = " + num2str(deleteCount) + ...
          ", Failed/Skipped = " + num2str(deleteFail))
     disp("====================================================")
+    
+    %% ====================================================
+    % [新增] 调用 dealwithmat.m 处理生成的 .mat 文件
+    % ====================================================
+    % 目的：
+    %   对本次生成的线性化模型 (.mat) 进行批处理，提取频率响应数据。
+    %   数据将被保存为 CSV 格式，便于后续 Python SVM 模型训练使用。
+    % 
+    % 输出路径：
+    %   Path_root_Results/Frequency_Response_Data/
+    
+    fprintf("\n[Process] Starting post-processing for directory: %s\n", Path_root_Results);
+    fprintf("[Process] Extracting frequency response data to CSV format...\n");
+    
+    t_post = tic; % 计时开始
+    try
+        % 调用处理函数，传入当前生成数据的根目录
+        dealwithmat(Path_root_Results);
+        
+        fprintf("[Success] Data extraction completed successfully.\n");
+        fprintf("[Output]  Files are saved in: %s\\Frequency_Response_Data\n", Path_root_Results);
+    catch ME
+        % 错误处理与报告
+        fprintf("[Error]   Failed to process .mat files.\n");
+        fprintf("[Reason]  %s\n", ME.message);
+        fprintf("[Advice]  Please check if 'dealwithmat.m' is in the path and files are accessible.\n");
+    end
+    
+    elapsed_time = toc(t_post);
+    fprintf("[Time]    Post-processing took %.2f seconds.\n", elapsed_time);
+    disp("====================================================")
+
 end % End of Generation_Mode loop
